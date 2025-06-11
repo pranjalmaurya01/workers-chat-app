@@ -17,7 +17,8 @@ import {
   TooltipTrigger,
 } from '@radix-ui/react-tooltip';
 import { RefreshCcw } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   adjectives,
@@ -33,7 +34,7 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<'div'>) {
   const [state, setState] = useState({ code: '' });
-  const codeRef = useRef<HTMLInputElement | null>(null);
+  const router = useRouter();
 
   function returnUniqueName() {
     const shortName = uniqueNamesGenerator({
@@ -70,6 +71,7 @@ export function LoginForm({
               if (state.code.length < MIN_LENGTH_ROOM_NAME) {
                 toast.error('Code too short', {});
               }
+              router.push(`/chat?room=${state.code}`);
             }}
           >
             <div className='flex flex-col gap-6'>
