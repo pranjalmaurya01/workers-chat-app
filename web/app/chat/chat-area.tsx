@@ -11,7 +11,10 @@ import {
   Video,
 } from 'lucide-react';
 import { useState } from 'react';
+import useWebSocket from 'react-use-websocket';
 import { chats } from './users-list';
+
+const socketUrl = `ws://${process.env.NEXT_PUBLIC_BASE_URL}/ws`;
 
 const messages = [
   {
@@ -52,6 +55,18 @@ export default function ({
   selectedChat: (typeof chats)[0];
 }) {
   const [messageInput, setMessageInput] = useState('');
+
+  const {
+    sendJsonMessage,
+    lastMessage,
+    lastJsonMessage,
+    readyState,
+    getWebSocket,
+  } = useWebSocket(socketUrl, {
+    onOpen: () => console.log('opened'),
+    //Will attempt to reconnect on all close events, such as server shutting down
+    shouldReconnect: (closeEvent) => true,
+  });
 
   const handleSendMessage = () => {
     if (messageInput.trim()) {
@@ -147,13 +162,13 @@ export default function ({
           {messageInput.trim() ? (
             <Button
               onClick={handleSendMessage}
-              className='bg-green-500 hover:bg-green-600 text-white rounded-full h-10 w-10 p-0'
+              className='bg-green-500 hover:bg-green-600 text-white rounded-full h-8 w-8 p-0'
             >
               <Send className='h-4 w-4' />
             </Button>
           ) : (
-            <Button variant='ghost' size='sm'>
-              <Mic className='h-5 w-5' />
+            <Button variant='ghost' size='sm' className='h-8 w-8'>
+              <Mic className='h-5 w-5 p-0' />
             </Button>
           )}
         </div>
