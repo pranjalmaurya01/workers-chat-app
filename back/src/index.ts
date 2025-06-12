@@ -41,19 +41,15 @@ export class WebSocketChatServer extends DurableObject {
 	sessions: Map<any, any>;
 	state: DurableObjectState;
 	storage: DurableObjectStorage;
-	name: string;
 
 	constructor(state: DurableObjectState, env: unknown) {
 		super(state, env);
 		this.state = state;
 		this.storage = state.storage;
 		this.env = env;
-		this.name = new Date().toLocaleTimeString();
 		this.sessions = new Map();
 
 		this.state.getWebSockets().forEach((webSocket) => {
-			// The constructor may have been called when waking up from hibernation,
-			// so get previously serialized metadata for any existing WebSockets.
 			let meta = webSocket.deserializeAttachment();
 			this.sessions.set(webSocket, { ...meta });
 		});
@@ -68,6 +64,10 @@ export class WebSocketChatServer extends DurableObject {
 		const name = new Date().toLocaleTimeString();
 		this.sessions.set(server, { name });
 		this.send(server, { type: 'name', name });
+
+		console.log([...this.sessions.values()]);
+		console.log(this.state.getWebSockets());
+		this.broadcast({ type: 'online', users: [...this.sessions.values()].map((n) => n.name) });
 
 		return new Response(null, {
 			status: 101,
@@ -119,21 +119,15 @@ export class WebSocketChatServer extends DurableObject {
 		});
 	}
 
+	async closeOrErrorHandler(ws: WebSocket) {
+		this.sessions.delete(ws);
+		this.broadcast({ type: 'online', users: [...this.sessions.values()].map((n) => n.name) });
+	}
+
 	async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
 		// If the client closes the connection, the runtime will invoke the webSocketClose() handler.
 		ws.close(code, 'Durable Object is closing WebSocket');
 		this.closeOrErrorHandler(ws);
-		console.log('bye');
-	}
-
-	async closeOrErrorHandler(ws: WebSocket) {
-		let session = this.sessions.get(ws) || {};
-		session.quit = true;
-		this.sessions.delete(ws);
-		// this.broadcast({ type: 'left', members: [...this.sessions.values()] }, ws);
-		// if (session.name) {
-		// this.broadcast({ quit: session.name });
-		// }
 	}
 
 	async webSocketError(webSocket: WebSocket, error: any) {
