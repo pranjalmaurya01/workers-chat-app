@@ -13,6 +13,11 @@
 				"WebSocketChatServer"
 			],
 			"tag": "v1"
+		},
+		{
+			"deleted_classes": [
+				"MyDurableObject"
+			]
 		}
 	],
 	// "assets": {
