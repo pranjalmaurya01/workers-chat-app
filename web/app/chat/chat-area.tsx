@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import useWebSocket from 'react-use-websocket';
+import { v7 as uuidv7 } from 'uuid';
 import { chats } from './users-list';
 
 const socketUrl = process.env.NEXT_PUBLIC_BASE_URL!;
@@ -49,8 +50,6 @@ const messages = [
   },
 ];
 
-const user = new Date().toLocaleTimeString();
-
 export default function ({
   selectedChat,
 }: {
@@ -59,6 +58,7 @@ export default function ({
   const [messageInput, setMessageInput] = useState('');
   const [messages, setMessages] = useState<any>([]);
   const [name, setName] = useState('');
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(
     socketUrl,
@@ -75,12 +75,32 @@ export default function ({
       switch (m.type) {
         case 'name':
           setName(m.name);
+
           break;
+
         case 'chat':
           setMessages((prev: any) => [...prev, m]);
+          sendJsonMessage({ type: 'delivered', msgId: m.id, sender: m.sender });
+
+          break;
+
+        case 'online':
+          setOnlineUsers(m.users);
+          break;
+
+        case 'ack':
+          setMessages((prev) => {
+            prev.forEach((e) => {
+              if (e.id === m.msgId) {
+                e.deliveredTo.push(m.deliveredTo);
+              }
+            });
+            return [...prev];
+          });
+          break;
 
         default:
-          break;
+          console.log(m);
       }
     }
   }, [lastJsonMessage]);
@@ -99,11 +119,13 @@ export default function ({
 
   function createNewMessage({ message }: { message: string }) {
     return {
+      id: uuidv7(),
       type: 'chat',
-      sender: user,
+      sender: name,
       message: message,
       timeStamp: new Date().toString(),
       sent: false,
+      deliveredTo: [],
     };
   }
 
@@ -119,7 +141,9 @@ export default function ({
           <div className='ml-3'>
             <h2 className='font-medium text-gray-900'>{selectedChat.name}</h2>
             <p className='text-sm text-gray-500'>
-              {selectedChat.online ? 'Online' : 'Last seen recently'}
+              {onlineUsers.length - 1 > 0
+                ? `${onlineUsers.length - 1} Online`
+                : ''}
             </p>
           </div>
         </div>
@@ -164,6 +188,13 @@ export default function ({
                 }`}
               >
                 {new Date(message.timeStamp.toString()).toLocaleTimeString()}
+              </p>
+              <p
+                className={`text-xs mt-1 ${
+                  message.sent ? 'text-green-100' : 'text-gray-500'
+                }`}
+              >
+                {message.sent && JSON.stringify(message.deliveredTo)}
               </p>
             </div>
           </div>
