@@ -61,12 +61,10 @@ export class WebSocketChatServer extends DurableObject {
 		const [client, server] = Object.values(webSocketPair);
 
 		this.ctx.acceptWebSocket(server);
-		const name = new Date().toLocaleTimeString();
+		const name = new Date().toString();
 		this.sessions.set(server, { name });
 		this.send(server, { type: 'name', name });
 
-		console.log([...this.sessions.values()]);
-		console.log(this.state.getWebSockets());
 		this.broadcast({ type: 'online', users: [...this.sessions.values()].map((n) => n.name) });
 
 		return new Response(null, {
@@ -87,7 +85,16 @@ export class WebSocketChatServer extends DurableObject {
 				case 'chat':
 					this.broadcast(message, ws);
 					break;
-
+				case 'delivered':
+					const deliveredToUser = this.sessions.get(ws);
+					for (let [key, value] of this.sessions.entries()) {
+						if (value.name === message.sender) {
+							key.send(JSON.stringify({ type: 'ack', msgId: message.msgId, deliveredTo: deliveredToUser.name }));
+							break;
+						}
+					}
+					// console.log(sender);
+					break;
 				default:
 					break;
 			}
@@ -121,6 +128,7 @@ export class WebSocketChatServer extends DurableObject {
 
 	async closeOrErrorHandler(ws: WebSocket) {
 		this.sessions.delete(ws);
+		this.sessions.delete({});
 		this.broadcast({ type: 'online', users: [...this.sessions.values()].map((n) => n.name) });
 	}
 
