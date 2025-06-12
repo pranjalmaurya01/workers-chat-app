@@ -15,9 +15,9 @@
 			"tag": "v1"
 		}
 	],
-	"assets": {
-		"directory": "./public"
-	},
+	// "assets": {
+	// 	"directory": "./public"
+	// },
 	"durable_objects": {
 		"bindings": [
 			{
