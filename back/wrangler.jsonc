@@ -10,7 +10,7 @@
 	"migrations": [
 		{
 			"new_sqlite_classes": [
-				"MyDurableObject"
+				"WebSocketChatServer"
 			],
 			"tag": "v1"
 		}
@@ -21,8 +21,8 @@
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "MyDurableObject",
-				"name": "MY_DURABLE_OBJECT"
+				"class_name": "WebSocketChatServer",
+				"name": "WEBSOCKET_CHAT_SERVER"
 			}
 		]
 	},
