@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -10,11 +10,11 @@ import {
   Smile,
   Video,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useWebSocket from 'react-use-websocket';
 import { chats } from './users-list';
 
-const socketUrl = `ws://${process.env.NEXT_PUBLIC_BASE_URL}/ws`;
+const socketUrl = process.env.NEXT_PUBLIC_BASE_URL!;
 
 const messages = [
   {
@@ -49,32 +49,63 @@ const messages = [
   },
 ];
 
+const user = new Date().toLocaleTimeString();
+
 export default function ({
   selectedChat,
 }: {
   selectedChat: (typeof chats)[0];
 }) {
   const [messageInput, setMessageInput] = useState('');
+  const [messages, setMessages] = useState<any>([]);
+  const [name, setName] = useState('');
 
-  const {
-    sendJsonMessage,
-    lastMessage,
-    lastJsonMessage,
-    readyState,
-    getWebSocket,
-  } = useWebSocket(socketUrl, {
-    onOpen: () => console.log('opened'),
-    //Will attempt to reconnect on all close events, such as server shutting down
-    shouldReconnect: (closeEvent) => true,
-  });
+  const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(
+    socketUrl,
+    {
+      onOpen: () => console.log('opened'),
+      shouldReconnect: (closeEvent) => true,
+    }
+  );
+
+  useEffect(() => {
+    const m = lastJsonMessage as any;
+
+    if (m && m.type) {
+      switch (m.type) {
+        case 'name':
+          setName(m.name);
+          break;
+        case 'chat':
+          setMessages((prev: any) => [...prev, m]);
+
+        default:
+          break;
+      }
+    }
+  }, [lastJsonMessage]);
 
   const handleSendMessage = () => {
     if (messageInput.trim()) {
-      // In a real app, you would send the message here
       console.log('Sending message:', messageInput);
-      setMessageInput('');
+      // setMessageInput('');
+      const newMsg = createNewMessage({ message: messageInput });
+      sendJsonMessage(newMsg);
+
+      newMsg.sent = true;
+      setMessages((prev: any) => [...prev, newMsg]);
     }
   };
+
+  function createNewMessage({ message }: { message: string }) {
+    return {
+      type: 'chat',
+      sender: user,
+      message: message,
+      timeStamp: new Date().toString(),
+      sent: false,
+    };
+  }
 
   return (
     <div className='flex-1 flex flex-col'>
@@ -82,7 +113,7 @@ export default function ({
       <div className='bg-gray-100 p-4 border-b border-gray-200 flex items-center justify-between'>
         <div className='flex items-center'>
           <Avatar className='h-10 w-10'>
-            <AvatarImage src={selectedChat.avatar || '/placeholder.svg'} />
+            {/* <AvatarImage src={selectedChat.avatar || '/placeholder.svg'} /> */}
             <AvatarFallback>{selectedChat.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className='ml-3'>
@@ -114,9 +145,9 @@ export default function ({
           backgroundColor: '#e5ddd5',
         }}
       >
-        {messages.map((message) => (
+        {messages.map((message, idx) => (
           <div
-            key={message.id}
+            key={idx}
             className={`flex ${message.sent ? 'justify-end' : 'justify-start'}`}
           >
             <div
@@ -126,13 +157,13 @@ export default function ({
                   : 'bg-white text-gray-900'
               } shadow-sm`}
             >
-              <p className='text-sm'>{message.text}</p>
+              <p className='text-sm'>{message.message}</p>
               <p
                 className={`text-xs mt-1 ${
                   message.sent ? 'text-green-100' : 'text-gray-500'
                 }`}
               >
-                {message.time}
+                {new Date(message.timeStamp.toString()).toLocaleTimeString()}
               </p>
             </div>
           </div>
