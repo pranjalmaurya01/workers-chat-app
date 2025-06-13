@@ -1,4 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
+import { v7 as uuidv7 } from 'uuid';
 
 export interface Env {
 	WEBSOCKET_CHAT_SERVER: DurableObjectNamespace<WebSocketChatServer>;
@@ -38,34 +39,23 @@ export default {
 
 // Durable Object
 export class WebSocketChatServer extends DurableObject {
-	sessions: Map<any, any>;
 	state: DurableObjectState;
 	storage: DurableObjectStorage;
+	sessions: {};
 
 	constructor(state: DurableObjectState, env: unknown) {
 		super(state, env);
 		this.state = state;
 		this.storage = state.storage;
 		this.env = env;
-		this.sessions = new Map();
-
-		this.state.getWebSockets().forEach((webSocket) => {
-			let meta = webSocket.deserializeAttachment();
-			this.sessions.set(webSocket, { ...meta });
-		});
+		this.sessions = {};
 	}
 
 	async fetch(request: Request): Promise<Response> {
-		// Creates two ends of a WebSocket connection.
 		const webSocketPair = new WebSocketPair();
 		const [client, server] = Object.values(webSocketPair);
 
 		this.ctx.acceptWebSocket(server);
-		const name = new Date().toString();
-		this.sessions.set(server, { name });
-		this.send(server, { type: 'name', name });
-
-		this.broadcast({ type: 'online', users: [...this.sessions.values()].map((n) => n.name) });
 
 		return new Response(null, {
 			status: 101,
@@ -73,27 +63,45 @@ export class WebSocketChatServer extends DurableObject {
 		});
 	}
 
-	send = (ws: WebSocket, data: any) => {
-		ws.send(JSON.stringify(data));
+	send = (data: any) => {
+		this.send(JSON.stringify(data));
 	};
 
-	async webSocketMessage(ws: WebSocket, message: any) {
-		message = JSON.parse(message);
+	async webSocketMessage(ws: WebSocket, m: any) {
+		m = JSON.parse(m);
 
-		if (message.type) {
-			switch (message.type) {
+		if (m.type) {
+			switch (m.type) {
 				case 'chat':
-					this.broadcast(message, ws);
+					this.broadcast(m, ws);
 					break;
 				case 'delivered':
-					const deliveredToUser = this.sessions.get(ws);
-					for (let [key, value] of this.sessions.entries()) {
-						if (value.name === message.sender) {
-							key.send(JSON.stringify({ type: 'ack', msgId: message.msgId, deliveredTo: deliveredToUser.name }));
-							break;
+					const senderWs = this.state.getWebSockets().find((t) => {
+						if (t.readyState === 1) {
+							const userId = t.deserializeAttachment().id;
+							return userId === m.senderId;
 						}
+					});
+					if (senderWs) {
+						senderWs.send(JSON.stringify({ type: 'ack', msgId: m.msgId, deliveredTo: ws.deserializeAttachment().userName }));
 					}
+					// const deliveredToUser = this.sessions.get(ws);
+					// for (let [key, value] of this.sessions.entries()) {
+					// 	if (value.name === m.sender) {
+					// 		key.send();
+					// 		break;
+					// 	}
+					// }
 					// console.log(sender);
+					break;
+
+				case 'userName':
+					const { userName, userId } = m;
+					const userD = { userName: userName, id: userId ? userId : uuidv7() };
+
+					ws.serializeAttachment({ ...ws.deserializeAttachment, ...userD });
+					ws.send(JSON.stringify({ type: 'user', ...userD }));
+					this.sendOnlineUsers();
 					break;
 				default:
 					break;
@@ -112,24 +120,28 @@ export class WebSocketChatServer extends DurableObject {
 		}
 
 		// Iterate over all the sessions sending them messages.
-		this.sessions.forEach((session, webSocket) => {
+		this.state.getWebSockets().forEach((webSocket) => {
 			if (ws !== webSocket) {
 				try {
 					webSocket.send(message);
 				} catch (err) {
-					// Whoops, this connection is dead. Remove it from the map and arrange to notify
-					// everyone below.
-					session.quit = true;
-					this.sessions.delete(webSocket);
+					// console.error('this socket is dead', webSocket.deserializeAttachment());
+					webSocket.close();
 				}
 			}
 		});
 	}
 
+	sendOnlineUsers() {
+		const onlineUsers = this.state
+			.getWebSockets()
+			.map((e) => e.readyState === 1 && e.deserializeAttachment())
+			.filter((e) => e);
+		this.broadcast({ type: 'online', users: onlineUsers });
+	}
+
 	async closeOrErrorHandler(ws: WebSocket) {
-		this.sessions.delete(ws);
-		this.sessions.delete({});
-		this.broadcast({ type: 'online', users: [...this.sessions.values()].map((n) => n.name) });
+		this.sendOnlineUsers();
 	}
 
 	async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
