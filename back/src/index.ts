@@ -9,10 +9,7 @@ export interface Env {
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		if (request.url.endsWith('/ws')) {
-			// Expect to receive a WebSocket Upgrade request.
-			// If there is one, accept the request and return a WebSocket Response.
 			const upgradeHeader = request.headers.get('Upgrade');
-
 			if (!upgradeHeader || upgradeHeader !== 'websocket') {
 				return new Response('Durable Object expected Upgrade: websocket', {
 					status: 426,
@@ -74,6 +71,8 @@ export class WebSocketChatServer extends DurableObject {
 			switch (m.type) {
 				case 'chat':
 					this.broadcast(m, ws);
+					// let key = `msg-${new Date(m.timeStamp).toISOString()}`;
+					// await this.storage.put(key, JSON.stringify(m));
 					break;
 				case 'delivered':
 					const senderWs = this.state.getWebSockets().find((t) => {
@@ -85,14 +84,6 @@ export class WebSocketChatServer extends DurableObject {
 					if (senderWs) {
 						senderWs.send(JSON.stringify({ type: 'ack', msgId: m.msgId, deliveredTo: ws.deserializeAttachment().userName }));
 					}
-					// const deliveredToUser = this.sessions.get(ws);
-					// for (let [key, value] of this.sessions.entries()) {
-					// 	if (value.name === m.sender) {
-					// 		key.send();
-					// 		break;
-					// 	}
-					// }
-					// console.log(sender);
 					break;
 
 				case 'userName':
@@ -102,15 +93,14 @@ export class WebSocketChatServer extends DurableObject {
 					ws.serializeAttachment({ ...ws.deserializeAttachment, ...userD });
 					ws.send(JSON.stringify({ type: 'user', ...userD }));
 					this.sendOnlineUsers();
+
+					// console.log(await this.storage.list({ reverse: true }));
+
 					break;
 				default:
 					break;
 			}
 		}
-
-		// Upon receiving a message from the client, the server replies with the same message,
-		// and the total number of connections with the "[Durable Object]: " prefix
-		// this.send(ws, { counter: this.value });
 	}
 
 	broadcast(message: any, ws?: WebSocket) {
@@ -145,7 +135,6 @@ export class WebSocketChatServer extends DurableObject {
 	}
 
 	async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
-		// If the client closes the connection, the runtime will invoke the webSocketClose() handler.
 		ws.close(code, 'Durable Object is closing WebSocket');
 		this.closeOrErrorHandler(ws);
 	}

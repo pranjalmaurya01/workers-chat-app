@@ -171,7 +171,7 @@ export default function ({
             className={`flex ${message.sent ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-xs lg:max-w-md px-2 my-1 py-2 rounded-lg ${
+              className={`max-w-xs lg:max-w-md px-2 mt-1 py-2 rounded-lg ${
                 message.sent
                   ? 'bg-green-500 text-white'
                   : 'bg-white text-gray-900'
