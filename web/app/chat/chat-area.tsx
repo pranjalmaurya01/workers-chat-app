@@ -23,7 +23,9 @@ export default function () {
   }, []);
 
   const [messages, setMessages] = useState<any>([]);
-  const [name, setName] = useState('');
+  const [user, setUser] = useState<null | { userId: string; userName: string }>(
+    null
+  );
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(
@@ -55,15 +57,17 @@ export default function () {
           const { id, userName } = m;
           localStorage.setItem('USER_ID', id);
           localStorage.setItem('USER_NAME', userName);
-          setName(userName);
+          setUser({ userId: id, userName: userName });
           break;
 
         case 'chat':
           setMessages((prev: any) => [...prev, m]);
           sendJsonMessage({
-            type: 'delivered',
+            type: 'ack',
             msgId: m.id,
             senderId: m.senderId,
+            timestamp: new Date().toString(),
+            msgTimestamp: m.timestamp,
           });
 
           break;
@@ -81,6 +85,17 @@ export default function () {
             });
             return [...prev];
           });
+          break;
+
+        case 'msgHistory':
+          console.log();
+
+          m.msgs.forEach((msg) => {
+            if (msg.senderId === user?.userId) {
+              msg.sent = true;
+            }
+          });
+          setMessages(m.msgs);
           break;
 
         default:

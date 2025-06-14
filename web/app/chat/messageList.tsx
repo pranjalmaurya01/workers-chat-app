@@ -59,7 +59,7 @@ export default function ({ messages }: { messages: any }) {
                   message.sent ? 'text-green-100' : 'text-gray-500'
                 }`}
               >
-                {new Date(message.timeStamp.toString()).toLocaleTimeString()}
+                {new Date(message.timestamp.toString()).toLocaleTimeString()}
               </p>
             </div>
           </div>

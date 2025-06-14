@@ -31,7 +31,7 @@ export default function ({
       senderName: localStorage.getItem('USER_NAME'),
       senderId: localStorage.getItem('USER_ID'),
       message: message,
-      timeStamp: new Date().toString(),
+      timestamp: new Date().toString(),
       sent: false,
       deliveredTo: [],
     };
