@@ -5,10 +5,25 @@ export interface Env {
 	WEBSOCKET_CHAT_SERVER: DurableObjectNamespace<WebSocketChatServer>;
 }
 
+const corsHeaders = {
+	'Access-Control-Allow-Origin': '*',
+	'Access-Control-Allow-Methods': 'GET,HEAD,POST,OPTIONS',
+	'Access-Control-Max-Age': '86400',
+};
+
 // Worker
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		if (request.url.endsWith('/ws')) {
+		const url = new URL(request.url);
+		if (url.pathname === '/ws/') {
+			const url = new URL(request.url);
+			const room = url.searchParams.get('room');
+			if (!room) {
+				return new Response('invalid', {
+					status: 401,
+				});
+			}
+
 			const upgradeHeader = request.headers.get('Upgrade');
 			if (!upgradeHeader || upgradeHeader !== 'websocket') {
 				return new Response('Durable Object expected Upgrade: websocket', {
@@ -18,11 +33,13 @@ export default {
 
 			// This example will refer to the same Durable Object,
 			// since the name "foo" is hardcoded.
-			let id = env.WEBSOCKET_CHAT_SERVER.idFromName('foo');
+			let id = env.WEBSOCKET_CHAT_SERVER.idFromName(room);
 			let stub = env.WEBSOCKET_CHAT_SERVER.get(id);
-
 			return stub.fetch(request);
 		}
+		// else if (request.method === 'GET') {
+		// return new Response(null, { status: 200, headers: { ...corsHeaders } });
+		// }
 
 		return new Response(null, {
 			status: 400,

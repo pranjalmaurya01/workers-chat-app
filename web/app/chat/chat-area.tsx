@@ -27,7 +27,7 @@ export default function () {
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(
-    socketUrl,
+    `${socketUrl}/?room=${room}`,
     {
       onOpen: () => console.log('opened'),
       shouldReconnect: () => true,

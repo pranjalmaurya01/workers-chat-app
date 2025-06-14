@@ -71,7 +71,8 @@ export function LoginForm({
   const router = useRouter();
 
   function createNewRoom() {
-    setState((prev) => ({ ...prev, code: returnUniqueName() }));
+    // returnUniqueName()
+    setState((prev) => ({ ...prev, code: 'SophisticatedGreenMandrill' }));
   }
 
   useEffect(() => {
@@ -103,7 +104,7 @@ export function LoginForm({
         </CardHeader>
         <CardContent>
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
 
               if (
@@ -112,6 +113,13 @@ export function LoginForm({
               ) {
                 toast.error('Code too short', {});
               }
+
+              // const r = await axiosInstance.get(
+              //   `/chat?room=${state.code}&userName=${userName}`
+              // );
+              // console.log(r);
+              // return;
+
               router.push(`/chat?room=${state.code}&userName=${userName}`);
             }}
           >
