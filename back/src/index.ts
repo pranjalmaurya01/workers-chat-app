@@ -88,18 +88,26 @@ export class WebSocketChatServer extends DurableObject {
 			switch (m.type) {
 				case 'chat':
 					this.broadcast(m, ws);
-					// let key = `msg-${new Date(m.timeStamp).toISOString()}`;
-					// await this.storage.put(key, JSON.stringify(m));
+					// if at the same time 2 messages arrive, only one will be saved
+					const storeMsg = { key: m.timestamp.toString(), value: JSON.stringify(m) };
+					await this.storage.put(storeMsg.key, storeMsg.value);
 					break;
-				case 'delivered':
+				case 'ack':
 					const senderWs = this.state.getWebSockets().find((t) => {
 						if (t.readyState === 1) {
 							const userId = t.deserializeAttachment().id;
 							return userId === m.senderId;
 						}
 					});
+					const receiver = ws.deserializeAttachment().userName;
 					if (senderWs) {
-						senderWs.send(JSON.stringify({ type: 'ack', msgId: m.msgId, deliveredTo: ws.deserializeAttachment().userName }));
+						senderWs.send(JSON.stringify({ type: 'ack', msgId: m.msgId, deliveredTo: receiver }));
+					}
+					let msg = (await this.storage.get(m.msgTimestamp)) as any | undefined;
+					if (msg) {
+						msg = JSON.parse(msg);
+						msg.deliveredTo.push(receiver);
+						this.storage.put(m.msgTimestamp, JSON.stringify(msg));
 					}
 					break;
 
@@ -110,9 +118,10 @@ export class WebSocketChatServer extends DurableObject {
 					ws.serializeAttachment({ ...ws.deserializeAttachment, ...userD });
 					ws.send(JSON.stringify({ type: 'user', ...userD }));
 					this.sendOnlineUsers();
-
-					// console.log(await this.storage.list({ reverse: true }));
-
+					const msgHistory = await this.storage.list({ limit: 50 });
+					const d: any = [...msgHistory.values()].map((e: any) => JSON.parse(e));
+					ws.send(JSON.stringify({ type: 'msgHistory', msgs: d }));
+					// await this.storage.deleteAll();
 					break;
 				default:
 					break;
