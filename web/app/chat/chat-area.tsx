@@ -1,9 +1,12 @@
+'use client';
+
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MoreVertical, Phone, Video } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import useWebSocket from 'react-use-websocket';
+import ImagePreview from './imagePreview';
 import MessageInput from './messageInput';
 import MessageList from './messageList';
 
@@ -27,6 +30,8 @@ export default function () {
     null
   );
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
 
   const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(
     `${socketUrl}/?room=${room}`,
@@ -103,8 +108,26 @@ export default function () {
     }
   }, [lastJsonMessage]);
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const items = e.clipboardData.items;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const imageFile = item.getAsFile();
+        if (imageFile) {
+          setFile(imageFile);
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            setPreview(event.target?.result as string);
+          };
+          reader.readAsDataURL(imageFile);
+          console.log(imageFile);
+        }
+      }
+    }
+  };
+
   return (
-    <div className='flex-1 flex flex-col'>
+    <div className='flex-1 flex flex-col' onPaste={handlePaste}>
       {/* Chat Header */}
       <div className='bg-gray-100 p-4 border-b border-gray-200 flex items-center justify-between'>
         <div className='flex items-center'>
@@ -140,6 +163,13 @@ export default function () {
       <MessageInput
         sendJsonMessage={sendJsonMessage}
         setMessages={setMessages}
+      />
+      <ImagePreview
+        preview={preview}
+        onCancel={() => {
+          setPreview(null);
+          setFile(null);
+        }}
       />
     </div>
   );

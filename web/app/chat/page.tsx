@@ -1,10 +1,9 @@
-import { Suspense } from 'react';
-import WhatsAppChat from './main';
+import ChatArea from '@/app/chat/chat-area';
 
 export default function () {
   return (
-    <Suspense fallback={null}>
-      <WhatsAppChat />
-    </Suspense>
+    <div className='flex h-screen bg-gray-100'>
+      <ChatArea />
+    </div>
   );
 }

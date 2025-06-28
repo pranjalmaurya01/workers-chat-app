@@ -52,7 +52,7 @@ export default function ({
             placeholder='Type a message'
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
             className='pr-12'
           />
         </div>
