@@ -37,8 +37,6 @@ export default function ({
     if (messageInput.trim()) {
       const newMsg = createNewMessage({ message: messageInput });
       sendJsonMessage(newMsg);
-
-      newMsg.sent = true;
       setMessages((prev: any) => [...prev, newMsg]);
       setMessageInput('');
     }

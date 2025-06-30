@@ -1,9 +1,9 @@
 import { handleWsRequest, WebSocketChatServer } from './ws';
 
-const corsHeaders = {
+const defaultHeaders = new Headers({
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET,HEAD,POST,OPTIONS',
-};
+});
 
 // Worker
 export default {
@@ -24,7 +24,7 @@ export default {
 					const key = crypto.randomUUID();
 					const resp = await env.R2.put(key, files);
 					if (resp) {
-						const headers = new Headers(corsHeaders);
+						const headers = new Headers(defaultHeaders);
 						headers.append('Content-Type', 'image/png');
 						return new Response(resp.key, { headers });
 					}
@@ -42,7 +42,7 @@ export default {
 					if (!key) break;
 					const resp = await env.R2.get(key);
 					if (!resp) break;
-					const headers = new Headers(corsHeaders);
+					const headers = new Headers(defaultHeaders);
 					resp.writeHttpMetadata(headers);
 					headers.set('etag', resp.httpEtag);
 					headers.append('Cache-Control', `max-age=${1 * 60 * 60}`);
@@ -56,7 +56,7 @@ export default {
 		return new Response(null, {
 			status: 200,
 			statusText: 'invalid URL',
-			headers: corsHeaders,
+			headers: defaultHeaders,
 		});
 	},
 };

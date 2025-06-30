@@ -7,7 +7,18 @@ import {
 import { axiosInstance } from '@/lib/utils';
 import { useEffect, useMemo, useState } from 'react';
 
-export default function ({ messages }: { messages: any[] }) {
+export interface UserI {
+  userId: string;
+  userName: string;
+}
+
+export default function ({
+  messages,
+  user,
+}: {
+  messages: any[];
+  user: null | UserI;
+}) {
   const [media, setMedia] = useState<any>({});
 
   const mediaList = useMemo(() => {
@@ -49,60 +60,62 @@ export default function ({ messages }: { messages: any[] }) {
         backgroundColor: '#e5ddd5',
       }}
     >
-      {messages.map((message, idx) => (
-        <div
-          key={idx}
-          className={`flex ${message.sent ? 'justify-end' : 'justify-start'}`}
-        >
-          <div
-            className={`min-w-[100px] max-w-xs lg:max-w-md px-2 py-2 rounded-lg ${
-              message.sent
-                ? 'bg-green-500 text-white'
-                : 'bg-white text-gray-900'
-            } shadow-sm`}
-          >
-            {!message.sent && (
-              <p className='text-[10px] font-extralight'>
-                {message.senderName}
-              </p>
-            )}
-            <p className='text-sm p-0.5'>{message.message}</p>
-            {message.media?.map(
-              (m, idx) => media[m] && <img key={idx} src={media[m]} alt='' />
-            )}
+      {messages.map((message, idx) => {
+        const sent = message.senderId === user?.userId;
 
-            {message.sent && (
-              <span
-                className={`text-[10px] mt-1 flex justify-end ${
-                  message.sent ? 'text-green-100' : 'text-gray-500'
-                }`}
-              >
-                {message.deliveredTo.map((e: string, idx: number) => (
-                  <Tooltip key={idx}>
-                    <TooltipTrigger asChild>
-                      <Avatar className='h-4 w-4'>
-                        <AvatarFallback className='bg-gray-500'>
-                          {e?.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent>{e}</TooltipContent>
-                  </Tooltip>
-                ))}
-              </span>
-            )}
-            <div className='flex justify-end mt-0.5'>
-              <p
-                className={`text-[9px] ${
-                  message.sent ? 'text-green-100' : 'text-gray-500'
-                }`}
-              >
-                {new Date(message.timestamp.toString()).toLocaleTimeString()}
-              </p>
+        return (
+          <div
+            key={idx}
+            className={`flex ${sent ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`min-w-[100px] max-w-xs lg:max-w-md px-2 py-2 rounded-lg ${
+                sent ? 'bg-green-500 text-white' : 'bg-white text-gray-900'
+              } shadow-sm`}
+            >
+              {!sent && (
+                <p className='text-[10px] font-extralight'>
+                  {message.senderName}
+                </p>
+              )}
+              <p className='text-sm p-0.5'>{message.message}</p>
+              {message.media?.map(
+                (m, idx) => media[m] && <img key={idx} src={media[m]} alt='' />
+              )}
+
+              {sent && (
+                <span
+                  className={`text-[10px] mt-1 flex justify-end ${
+                    sent ? 'text-green-100' : 'text-gray-500'
+                  }`}
+                >
+                  {message.deliveredTo.map((e: string, idx: number) => (
+                    <Tooltip key={idx}>
+                      <TooltipTrigger asChild>
+                        <Avatar className='h-4 w-4'>
+                          <AvatarFallback className='bg-gray-500'>
+                            {e?.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent>{e}</TooltipContent>
+                    </Tooltip>
+                  ))}
+                </span>
+              )}
+              <div className='flex justify-end mt-0.5'>
+                <p
+                  className={`text-[9px] ${
+                    sent ? 'text-green-100' : 'text-gray-500'
+                  }`}
+                >
+                  {new Date(message.timestamp.toString()).toLocaleTimeString()}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

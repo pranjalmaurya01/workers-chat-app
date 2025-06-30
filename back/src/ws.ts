@@ -74,7 +74,7 @@ export class WebSocketChatServer extends DurableObject {
 					break;
 				case 'clearChat':
 					await this.storage.deleteAll();
-					ws.send(JSON.stringify({ type: 'msgHistory', msgs: [] }));
+					this.broadcast(JSON.stringify({ type: 'msgHistory', msgs: [] }));
 					break;
 
 				default:

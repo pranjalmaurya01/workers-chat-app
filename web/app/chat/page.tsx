@@ -1,4 +1,4 @@
-import ChatArea from '@/app/chat/chat-area';
+import ChatArea from '@/app/chat/chatArea';
 import { Suspense } from 'react';
 
 export default function () {

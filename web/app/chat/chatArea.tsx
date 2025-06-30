@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react';
 import useWebSocket from 'react-use-websocket';
 import ImagePreview from './imagePreview';
 import MessageInput from './messageInput';
-import MessageList from './messageList';
+import MessageList, { UserI } from './messageList';
 
 const socketUrl = process.env.NEXT_PUBLIC_BASE_URL!;
 const mediaSizeLimit = 5 * 1024 * 1024;
@@ -40,9 +40,7 @@ export default function () {
   }, []);
 
   const [messages, setMessages] = useState<any>([]);
-  const [user, setUser] = useState<null | { userId: string; userName: string }>(
-    null
-  );
+  const [user, setUser] = useState<null | UserI>(null);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -107,11 +105,6 @@ export default function () {
           break;
 
         case 'msgHistory':
-          m.msgs.forEach((msg) => {
-            if (msg.senderId === user?.userId) {
-              msg.sent = true;
-            }
-          });
           setMessages(m.msgs);
           setTimeout(() => {
             const msgList = document.querySelector('#messageList');
@@ -132,12 +125,13 @@ export default function () {
       if (item.type.startsWith('image/')) {
         const imageFile = item.getAsFile();
         if (imageFile && imageFile.size < mediaSizeLimit) {
-          setFile(imageFile);
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            setPreview(event.target?.result as string);
-          };
-          reader.readAsDataURL(imageFile);
+          const compressedFile = await imageCompression(
+            imageFile,
+            imgCompressOpts
+          );
+          const blobUrl = URL.createObjectURL(compressedFile);
+          setPreview(blobUrl);
+          setFile(compressedFile);
         }
       }
     }
@@ -146,12 +140,8 @@ export default function () {
   async function handleUpload() {
     if (!file) return;
 
-    const compressedFile = await imageCompression(file, imgCompressOpts);
-    const blobUrl = URL.createObjectURL(compressedFile);
-    setPreview(blobUrl);
-
     const fd = new FormData();
-    fd.append('file', compressedFile);
+    fd.append('file', file);
     const res = await axiosInstance.post('/uploadMedia', fd, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -159,7 +149,6 @@ export default function () {
     });
     const newMsg = createNewMessage({ message: '', media: [res.data] });
     sendJsonMessage(newMsg);
-    newMsg.sent = true;
     setMessages((prev: any) => [...prev, newMsg]);
 
     setPreview(null);
@@ -176,7 +165,8 @@ export default function () {
           </Avatar>
           <div className='ml-3'>
             <h2 className='font-medium text-gray-900'>
-              {`${userName} | ${room}`}
+              <span>{userName}</span> |{' '}
+              <span className='text-light'>{room}</span>
             </h2>
             <p className='text-sm text-gray-500'>
               {onlineUsers.length - 1 > 0
@@ -206,7 +196,7 @@ export default function () {
         </div>
       </div>
 
-      <MessageList messages={messages} />
+      <MessageList messages={messages} user={user} />
 
       <MessageInput
         sendJsonMessage={sendJsonMessage}
