@@ -1,13 +1,8 @@
 import { handleWsRequest, WebSocketChatServer } from './ws';
 
-export interface Env {
-	WEBSOCKET_CHAT_SERVER: DurableObjectNamespace<WebSocketChatServer>;
-}
-
 const corsHeaders = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET,HEAD,POST,OPTIONS',
-	'Access-Control-Max-Age': '86400',
 };
 
 // Worker
@@ -18,16 +13,50 @@ export default {
 		if (url.pathname === '/ws/') {
 			return handleWsRequest(url, request, env, ctx);
 		}
-		// else if (request.method === 'GET') {
-		// return new Response(null, { status: 200, headers: { ...corsHeaders } });
-		// }
+
+		const pathName = url.pathname.substring(1);
+
+		if (request.method === 'POST') {
+			switch (pathName) {
+				case 'uploadMedia':
+					const fd = await request.formData();
+					const files = fd.get('file');
+					const key = crypto.randomUUID();
+					const resp = await env.R2.put(key, files);
+					if (resp) {
+						const headers = new Headers(corsHeaders);
+						headers.append('Content-Type', 'image/png');
+						return new Response(resp.key, { headers });
+					}
+					return new Response();
+
+				default:
+					break;
+			}
+		}
+
+		if (request.method === 'GET') {
+			switch (pathName) {
+				case 'getMedia':
+					const key = url.searchParams.get('key');
+					if (!key) break;
+					const resp = await env.R2.get(key);
+					if (!resp) break;
+					const headers = new Headers(corsHeaders);
+					resp.writeHttpMetadata(headers);
+					headers.set('etag', resp.httpEtag);
+					headers.append('Cache-Control', `max-age=${1 * 60 * 60}`);
+					return new Response(resp.body, { headers });
+
+				default:
+					break;
+			}
+		}
 
 		return new Response(null, {
-			status: 400,
-			statusText: 'Bad Request',
-			headers: {
-				'Content-Type': 'text/plain',
-			},
+			status: 200,
+			statusText: 'invalid URL',
+			headers: corsHeaders,
 		});
 	},
 };

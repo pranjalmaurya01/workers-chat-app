@@ -1,7 +1,9 @@
 'use client';
 
+import { createNewMessage } from '@/app/chat/messageInput';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { axiosInstance } from '@/lib/utils';
 import { MoreVertical, Phone, Video } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -11,6 +13,7 @@ import MessageInput from './messageInput';
 import MessageList from './messageList';
 
 const socketUrl = process.env.NEXT_PUBLIC_BASE_URL!;
+const mediaSizeLimit = 5 * 1024 * 1024;
 
 export default function () {
   const searchParams = useSearchParams();
@@ -108,23 +111,41 @@ export default function () {
     }
   }, [lastJsonMessage]);
 
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+  const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
     const items = e.clipboardData.items;
     for (const item of items) {
       if (item.type.startsWith('image/')) {
         const imageFile = item.getAsFile();
-        if (imageFile) {
+        if (imageFile && imageFile.size < mediaSizeLimit) {
           setFile(imageFile);
           const reader = new FileReader();
           reader.onload = (event) => {
             setPreview(event.target?.result as string);
           };
           reader.readAsDataURL(imageFile);
-          console.log(imageFile);
         }
       }
     }
   };
+
+  async function handleUpload() {
+    if (!file) return;
+
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await axiosInstance.post('/uploadMedia', fd, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    const newMsg = createNewMessage({ message: '', media: [res.data] });
+    sendJsonMessage(newMsg);
+    newMsg.sent = true;
+    setMessages((prev: any) => [...prev, newMsg]);
+
+    setPreview(null);
+    setFile(null);
+  }
 
   return (
     <div className='flex-1 flex flex-col' onPaste={handlePaste}>
@@ -166,6 +187,7 @@ export default function () {
       />
       <ImagePreview
         preview={preview}
+        onUpload={handleUpload}
         onCancel={() => {
           setPreview(null);
           setFile(null);

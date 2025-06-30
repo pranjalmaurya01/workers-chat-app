@@ -1,6 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
 import { v7 as uuidv7 } from 'uuid';
-import { Env } from './index';
 
 export class WebSocketChatServer extends DurableObject {
 	state: DurableObjectState;

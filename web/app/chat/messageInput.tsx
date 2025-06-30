@@ -4,6 +4,26 @@ import { Mic, Paperclip, Send, Smile } from 'lucide-react';
 import { useState } from 'react';
 import { v7 as uuidv7 } from 'uuid';
 
+export function createNewMessage({
+  message,
+  media = [],
+}: {
+  message: string;
+  media?: string[];
+}) {
+  return {
+    id: uuidv7(),
+    type: 'chat',
+    senderName: localStorage.getItem('USER_NAME'),
+    senderId: localStorage.getItem('USER_ID'),
+    message: message,
+    timestamp: new Date().toString(),
+    sent: false,
+    deliveredTo: [],
+    media,
+  };
+}
+
 export default function ({
   sendJsonMessage,
   setMessages,
@@ -13,7 +33,7 @@ export default function ({
 }) {
   const [messageInput, setMessageInput] = useState('');
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (messageInput.trim()) {
       const newMsg = createNewMessage({ message: messageInput });
       sendJsonMessage(newMsg);
@@ -23,19 +43,6 @@ export default function ({
       setMessageInput('');
     }
   };
-
-  function createNewMessage({ message }: { message: string }) {
-    return {
-      id: uuidv7(),
-      type: 'chat',
-      senderName: localStorage.getItem('USER_NAME'),
-      senderId: localStorage.getItem('USER_ID'),
-      message: message,
-      timestamp: new Date().toString(),
-      sent: false,
-      deliveredTo: [],
-    };
-  }
 
   return (
     <div className='bg-gray-100 p-4 border-t border-gray-200'>

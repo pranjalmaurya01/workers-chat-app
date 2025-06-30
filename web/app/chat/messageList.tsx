@@ -4,8 +4,42 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { axiosInstance } from '@/lib/utils';
+import { useEffect, useMemo, useState } from 'react';
 
-export default function ({ messages }: { messages: any }) {
+export default function ({ messages }: { messages: any[] }) {
+  const [media, setMedia] = useState<any>({});
+
+  const mediaList = useMemo(() => {
+    return messages.filter((e) => e.media?.length > 0).flatMap((e) => e.media);
+  }, [messages]);
+
+  useEffect(() => {
+    if (!media || mediaList.length === 0) return;
+    (async () => {
+      const ms = mediaList.filter((m) => !media[m]);
+      const prs = await Promise.all(
+        ms.map((m) =>
+          getMedias({ key: m }).then((m) => URL.createObjectURL(m.data))
+        )
+      );
+
+      setMedia((prev) => {
+        ms.forEach((m, idx) => {
+          prev[m] = prs[idx];
+        });
+
+        return { ...prev };
+      });
+    })();
+  }, [mediaList]);
+
+  function getMedias({ key }: { key: string[] }) {
+    return axiosInstance.get(`getMedia?key=${key}`, {
+      responseType: 'blob',
+    });
+  }
+
   return (
     <div
       className='flex-1 overflow-y-auto space-y-1.5 space-x-3 p-2'
@@ -32,6 +66,9 @@ export default function ({ messages }: { messages: any }) {
               </p>
             )}
             <p className='text-sm p-0.5'>{message.message}</p>
+            {message.media?.map(
+              (m, idx) => media[m] && <img key={idx} src={media[m]} alt='' />
+            )}
 
             {message.sent && (
               <span
