@@ -2,9 +2,15 @@
 
 import { createNewMessage } from '@/app/chat/messageInput';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarTrigger,
+} from '@/components/ui/menubar';
 import { axiosInstance } from '@/lib/utils';
-import { MoreVertical, Phone, Video } from 'lucide-react';
+import { MoreVertical } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import useWebSocket from 'react-use-websocket';
@@ -96,14 +102,18 @@ export default function () {
           break;
 
         case 'msgHistory':
-          console.log();
-
           m.msgs.forEach((msg) => {
             if (msg.senderId === user?.userId) {
               msg.sent = true;
             }
           });
           setMessages(m.msgs);
+          setTimeout(() => {
+            const msgList = document.querySelector('#messageList');
+
+            if (!msgList) return;
+            msgList.scroll(0, msgList.scrollHeight);
+          }, 500);
           break;
 
         default:
@@ -167,15 +177,22 @@ export default function () {
         </div>
 
         <div className='flex space-x-2'>
-          <Button variant='ghost' size='sm'>
-            <Video className='h-5 w-5' />
-          </Button>
-          <Button variant='ghost' size='sm'>
-            <Phone className='h-5 w-5' />
-          </Button>
-          <Button variant='ghost' size='sm'>
-            <MoreVertical className='h-5 w-5' />
-          </Button>
+          <Menubar asChild>
+            <MenubarMenu>
+              <MenubarTrigger>
+                <MoreVertical className='h-5 w-5' />
+              </MenubarTrigger>
+              <MenubarContent>
+                <MenubarItem
+                  onClick={() => {
+                    sendJsonMessage({});
+                  }}
+                >
+                  Clear Chat
+                </MenubarItem>
+              </MenubarContent>
+            </MenubarMenu>
+          </Menubar>
         </div>
       </div>
 
