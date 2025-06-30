@@ -67,7 +67,7 @@ export class WebSocketChatServer extends DurableObject {
 					ws.serializeAttachment({ ...ws.deserializeAttachment, ...userD });
 					ws.send(JSON.stringify({ type: 'user', ...userD }));
 					this.sendOnlineUsers();
-					const msgHistory = await this.storage.list({ limit: 50, reverse: true });
+					const msgHistory = await this.storage.list({ limit: 50 });
 					const d: any = [...msgHistory.values()].map((e: any) => JSON.parse(e));
 					ws.send(JSON.stringify({ type: 'msgHistory', msgs: d }));
 					// await this.storage.deleteAll();

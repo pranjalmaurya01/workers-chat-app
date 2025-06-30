@@ -10,6 +10,7 @@ import {
   MenubarTrigger,
 } from '@/components/ui/menubar';
 import { axiosInstance } from '@/lib/utils';
+import imageCompression from 'browser-image-compression';
 import { MoreVertical } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -20,6 +21,10 @@ import MessageList from './messageList';
 
 const socketUrl = process.env.NEXT_PUBLIC_BASE_URL!;
 const mediaSizeLimit = 5 * 1024 * 1024;
+const imgCompressOpts = {
+  maxSizeMB: 1,
+  useWebWorker: true,
+};
 
 export default function () {
   const searchParams = useSearchParams();
@@ -141,8 +146,12 @@ export default function () {
   async function handleUpload() {
     if (!file) return;
 
+    const compressedFile = await imageCompression(file, imgCompressOpts);
+    const blobUrl = URL.createObjectURL(compressedFile);
+    setPreview(blobUrl);
+
     const fd = new FormData();
-    fd.append('file', file);
+    fd.append('file', compressedFile);
     const res = await axiosInstance.post('/uploadMedia', fd, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -163,11 +172,12 @@ export default function () {
       <div className='bg-gray-100 p-4 border-b border-gray-200 flex items-center justify-between'>
         <div className='flex items-center'>
           <Avatar className='h-10 w-10'>
-            {/* <AvatarImage src={selectedChat.avatar || '/placeholder.svg'} /> */}
-            <AvatarFallback>{room?.charAt(0)}</AvatarFallback>
+            <AvatarFallback>{userName?.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className='ml-3'>
-            <h2 className='font-medium text-gray-900'>{room}</h2>
+            <h2 className='font-medium text-gray-900'>
+              {`${userName} | ${room}`}
+            </h2>
             <p className='text-sm text-gray-500'>
               {onlineUsers.length - 1 > 0
                 ? `${onlineUsers.length - 1} Online`
