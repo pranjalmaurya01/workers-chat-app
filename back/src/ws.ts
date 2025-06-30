@@ -38,7 +38,7 @@ export class WebSocketChatServer extends DurableObject {
 				case 'chat':
 					this.broadcast(m, ws);
 					// if at the same time 2 messages arrive, only one will be saved
-					const storeMsg = { key: m.timestamp.toString(), value: JSON.stringify(m) };
+					const storeMsg = { key: `${Date.now()}`, value: JSON.stringify(m) };
 					await this.storage.put(storeMsg.key, storeMsg.value);
 					break;
 				case 'ack':
@@ -67,11 +67,16 @@ export class WebSocketChatServer extends DurableObject {
 					ws.serializeAttachment({ ...ws.deserializeAttachment, ...userD });
 					ws.send(JSON.stringify({ type: 'user', ...userD }));
 					this.sendOnlineUsers();
-					const msgHistory = await this.storage.list({ limit: 50 });
+					const msgHistory = await this.storage.list({ limit: 50, reverse: true });
 					const d: any = [...msgHistory.values()].map((e: any) => JSON.parse(e));
 					ws.send(JSON.stringify({ type: 'msgHistory', msgs: d }));
 					// await this.storage.deleteAll();
 					break;
+				case 'clearChat':
+					await this.storage.deleteAll();
+					ws.send(JSON.stringify({ type: 'msgHistory', msgs: [] }));
+					break;
+
 				default:
 					break;
 			}

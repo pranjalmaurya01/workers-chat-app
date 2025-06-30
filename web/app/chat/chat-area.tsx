@@ -185,7 +185,7 @@ export default function () {
               <MenubarContent>
                 <MenubarItem
                   onClick={() => {
-                    sendJsonMessage({});
+                    sendJsonMessage({ type: 'clearChat' });
                   }}
                 >
                   Clear Chat
