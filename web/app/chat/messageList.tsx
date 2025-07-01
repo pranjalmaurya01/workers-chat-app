@@ -79,8 +79,14 @@ export default function ({
                 </p>
               )}
               <p className='text-sm p-0.5'>{message.message}</p>
-              {message.media?.map(
-                (m, idx) => media[m] && <img key={idx} src={media[m]} alt='' />
+              {message.media?.map((m, idx) =>
+                media[m] ? (
+                  <img key={idx} src={media[m]} alt='' />
+                ) : (
+                  <p key={idx} className='text-red-500'>
+                    Error loading image
+                  </p>
+                )
               )}
 
               {sent && (

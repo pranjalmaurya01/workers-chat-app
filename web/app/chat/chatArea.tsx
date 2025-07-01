@@ -26,6 +26,15 @@ const imgCompressOpts = {
   useWebWorker: true,
 };
 
+function scrollToEndChatArea() {
+  setTimeout(() => {
+    const msgList = document.querySelector('#messageList');
+
+    if (!msgList) return;
+    msgList.scroll(0, msgList.scrollHeight);
+  }, 500);
+}
+
 export default function () {
   const searchParams = useSearchParams();
   const room = searchParams.get('room');
@@ -44,6 +53,7 @@ export default function () {
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [isImgLoading, setImgLoading] = useState(false);
 
   const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(
     `${socketUrl}/?room=${room}`,
@@ -87,6 +97,7 @@ export default function () {
             msgTimestamp: m.timestamp,
           });
 
+          scrollToEndChatArea();
           break;
 
         case 'online':
@@ -106,12 +117,7 @@ export default function () {
 
         case 'msgHistory':
           setMessages(m.msgs);
-          setTimeout(() => {
-            const msgList = document.querySelector('#messageList');
-
-            if (!msgList) return;
-            msgList.scroll(0, msgList.scrollHeight);
-          }, 500);
+          scrollToEndChatArea();
           break;
 
         default:
@@ -121,8 +127,21 @@ export default function () {
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
     const items = e.clipboardData.items;
+
     for (const item of items) {
+      if (item.type.startsWith('text/plain')) {
+        item?.getAsString((e) => {
+          console.log(e);
+          // const msgInp: HTMLInputElement | null =
+          // document.querySelector('#msgInp');
+          // if (!msgInp) return;
+          // msgInp.change;
+        });
+        continue;
+      }
+
       if (item.type.startsWith('image/')) {
+        setImgLoading(true);
         const imageFile = item.getAsFile();
         if (imageFile && imageFile.size < mediaSizeLimit) {
           const compressedFile = await imageCompression(
@@ -150,7 +169,7 @@ export default function () {
     const newMsg = createNewMessage({ message: '', media: [res.data] });
     sendJsonMessage(newMsg);
     setMessages((prev: any) => [...prev, newMsg]);
-
+    scrollToEndChatArea();
     setPreview(null);
     setFile(null);
   }

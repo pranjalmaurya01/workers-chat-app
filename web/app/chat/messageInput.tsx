@@ -54,6 +54,7 @@ export default function ({
 
         <div className='flex-1 relative'>
           <Input
+            autoComplete='false'
             placeholder='Type a message'
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
